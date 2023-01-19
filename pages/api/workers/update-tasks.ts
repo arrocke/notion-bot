@@ -3,8 +3,7 @@ import { isFullPage } from '@notionhq/client'
 import { iteratePaginatedAPI } from '@notionhq/client'
 import { add, format, isBefore } from 'date-fns'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import notion from '../../notion-client'
-
+import notion from '../../../notion-client'
 
 export default async function handler(
   req: NextApiRequest,

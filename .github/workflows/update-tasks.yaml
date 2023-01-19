@@ -1,0 +1,14 @@
+name: daily-worker
+on:
+  schedule:
+    - cron: '0 8 * * *'
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Tasks
+        run: |
+          curl --request POST \
+          --url 'https://notion.rocke.dev/api/update-tasks' \
+          --header "Content-Type: application/json" \
+          --body '{"databaseId":"$DATABASE_ID"}'
