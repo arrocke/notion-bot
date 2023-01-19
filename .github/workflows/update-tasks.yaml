@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 8 * * *'
 jobs:
-  cron:
+  update-tasks:
     runs-on: ubuntu-latest
     steps:
       - name: Update Tasks
@@ -12,4 +12,4 @@ jobs:
           curl --request POST \
           --url 'https://notion.rocke.dev/api/update-tasks' \
           --header "Content-Type: application/json" \
-          --body '{"databaseId":"$DATABASE_ID"}'
+          --data '{"databaseId":"$DATABASE_ID"}'
