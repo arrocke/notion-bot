@@ -146,81 +146,90 @@ export function parseRecurrence(str: string) {
   }
 }
 
+// TODO: jump forward recurrences until in the future.
 export function nextRecurrence(date: Date, recurrence: string) {
   const { interval, internal } = parseRecurrence(recurrence);
 
-  console.log(interval, internal)
-
-  let refDate = date;
-  switch (internal.type) {
-    case "days": {
-      switch (interval.type) {
-        case "weeks": {
-          if (internal.amount <= date.getDay()) refDate = date;
-          else refDate = add(date, { days: -7 });
-          break;
+  function nextRecurrenceIteration(date: Date) {
+    let refDate = date;
+    switch (internal.type) {
+      case "days": {
+        switch (interval.type) {
+          case "weeks": {
+            if (internal.amount <= date.getDay()) refDate = date;
+            else refDate = add(date, { days: -7 });
+            break;
+          }
+          case "months": {
+            if (internal.amount <= date.getDate()) refDate = date;
+            else refDate = add(date, { months: -1 });
+            break;
+          }
+          case "years": {
+            if (internal.amount <= getDaysInYear(date)) refDate = date;
+            else refDate = add(date, { years: -1 });
+            break;
+          }
         }
-        case "months": {
-          if (internal.amount <= date.getDate()) refDate = date;
-          else refDate = add(date, { months: -1 });
-          break;
-        }
-        case "years": {
-          if (internal.amount <= getDaysInYear(date)) refDate = date;
-          else refDate = add(date, { years: -1 });
-          break;
-        }
+        break;
       }
-      break;
-    }
-    case "date": {
-      if (interval.type !== "years") {
-        throw new Error(`unrecognized recurrence string: ${recurrence}`);
-      }
-
-      const month = monthMap[internal.month]
-      if (month < date.getMonth() || (month === date.getMonth() && internal.day <= date.getDate())) {
-        refDate = date
-      } else {
-        refDate = add(date, { years: - 1})
-      }
-      break
-    }
-  }
-
-  const nextInterval = add(refDate, { [interval.type]: interval.amount });
-
-  switch (internal.type) {
-    case "days": {
-      switch (interval.type) {
-        case "days": {
-          return nextInterval
-        }
-        case "weeks": {
-          return add(startOfWeek(nextInterval), {
-            days: internal.amount
-          });
-        }
-        case "months": {
-          return add(startOfMonth(nextInterval), {
-            days: internal.amount - 1
-          });
-        }
-        case "years": {
-          return add(startOfYear(nextInterval), {
-            days: internal.amount - 1
-          });
-        }
-        default: {
+      case "date": {
+        if (interval.type !== "years") {
           throw new Error(`unrecognized recurrence string: ${recurrence}`);
         }
+
+        const month = monthMap[internal.month]
+        if (month < date.getMonth() || (month === date.getMonth() && internal.day <= date.getDate())) {
+          refDate = date
+        } else {
+          refDate = add(date, { years: - 1})
+        }
+        break
       }
     }
-    case "date": {
-      return set(nextInterval, {
-        month: monthMap[internal.month],
-        date: internal.day
-      });
+
+    const nextInterval = add(refDate, { [interval.type]: interval.amount });
+
+    switch (internal.type) {
+      case "days": {
+        switch (interval.type) {
+          case "days": {
+            return nextInterval
+          }
+          case "weeks": {
+            return add(startOfWeek(nextInterval), {
+              days: internal.amount
+            });
+          }
+          case "months": {
+            return add(startOfMonth(nextInterval), {
+              days: internal.amount - 1
+            });
+          }
+          case "years": {
+            return add(startOfYear(nextInterval), {
+              days: internal.amount - 1
+            });
+          }
+          default: {
+            throw new Error(`unrecognized recurrence string: ${recurrence}`);
+          }
+        }
+      }
+      case "date": {
+        return set(nextInterval, {
+          month: monthMap[internal.month],
+          date: internal.day
+        });
+      }
     }
   }
+
+  let nextDate = date
+  const now = new Date()
+  while (nextDate <= date || nextDate <= now) {
+    nextDate = nextRecurrenceIteration(nextDate)
+  }
+
+  return nextDate
 }
