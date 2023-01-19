@@ -10,6 +10,7 @@ jobs:
       - name: Update Tasks
         run: |
           curl --request POST \
-          --url 'https://notion.rocke.dev/api/update-tasks' \
+          --url 'https://notion.rocke.dev/api/workers/update-tasks' \
           --header "Content-Type: application/json" \
-          --data '{"databaseId":"$DATABASE_ID"}'
+          --data '{"databaseId":"$DATABASE_ID"}' \
+          --fail-with-body
