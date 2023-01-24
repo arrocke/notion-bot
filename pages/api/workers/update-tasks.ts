@@ -1,21 +1,11 @@
 import { nextRecurrence } from '@/recurrence'
 import { isFullPage } from '@notionhq/client'
 import { iteratePaginatedAPI } from '@notionhq/client'
-import { add, format, isBefore } from 'date-fns'
+import { add, endOfWeek, format, isBefore } from 'date-fns'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import notion from '../../../notion-client'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<{ error: string } | undefined>
-) {
-  const databaseId = req.body.databaseId
-  if (!databaseId) {
-    return res.status(422).json({
-      error: 'databaseId required'
-    })
-  }
-
+async function processRecurringTasks(databaseId: string) {
   for await (const page of iteratePaginatedAPI(notion.databases.query, {
     database_id: databaseId,
     filter: {
@@ -47,7 +37,6 @@ export default async function handler(
       const dueDate = dueDateProperty.date ? new Date(dueDateProperty.date.start) : new Date()
 
       const newDueDate = nextRecurrence(dueDate, recurrence)
-      const isWithinWeek = isBefore(newDueDate, add(new Date(), { days: 7 }))
       await notion.pages.update({
         page_id: page.id,
         properties: {
@@ -57,7 +46,7 @@ export default async function handler(
           },
           'Status': {
             type: 'status',
-            status: { name: isWithinWeek ? 'Not started' : 'Unplanned' }
+            status: { name: 'Unplanned' }
           }
         }
       })
@@ -66,6 +55,60 @@ export default async function handler(
       console.error(`Failed to process page ${page.id}: ${error}`)
     }
   }
+}
+
+async function processUpcomingTasks(databaseId: string) {
+  for await (const page of iteratePaginatedAPI(notion.databases.query, {
+    database_id: databaseId,
+    filter: {
+      and: [
+        {
+          property: 'Due Date',
+          date: {
+            on_or_before: endOfWeek(new Date()).toISOString()
+          }
+        },
+        {
+          property: 'Status',
+          status: {
+            equals: 'Unplanned'
+          }
+        }
+      ]
+    }
+  })) {
+    try {
+      if (!isFullPage(page)) continue
+
+      await notion.pages.update({
+        page_id: page.id,
+        properties: {
+          'Status': {
+            type: 'status',
+            status: { name: 'Not started' }
+          }
+        }
+      })
+      console.log(`Updated page ${page.id} to 'not started'`)
+    } catch (error) {
+      console.error(`Failed to process page ${page.id}: ${error}`)
+    }
+  }
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<{ error: string } | undefined>
+) {
+  const databaseId = req.body.databaseId
+  if (!databaseId) {
+    return res.status(422).json({
+      error: 'databaseId required'
+    })
+  }
+
+  await processRecurringTasks(databaseId)
+  await processUpcomingTasks(databaseId)
 
   res.status(204).end()
 }
