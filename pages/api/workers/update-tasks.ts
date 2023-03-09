@@ -1,7 +1,7 @@
 import { nextRecurrence } from '@/recurrence'
 import { isFullPage } from '@notionhq/client'
 import { iteratePaginatedAPI } from '@notionhq/client'
-import { add, endOfWeek, format, isBefore } from 'date-fns'
+import { add, endOfWeek, format, differenceInDays } from 'date-fns'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import notion from '../../../notion-client'
 
@@ -32,17 +32,21 @@ async function processRecurringTasks(databaseId: string) {
       if (recurrenceProperty.type !== 'rich_text') continue
       const recurrence = recurrenceProperty.rich_text[0]?.plain_text ?? ''
 
-      const dueDateProperty = page.properties['Due Date']
-      if (dueDateProperty.type !== 'date') continue
-      const dueDate = dueDateProperty.date ? new Date(dueDateProperty.date.start) : new Date()
+      const dateProperty = page.properties['Due Date']
+      if (dateProperty.type !== 'date') continue
 
-      const newDueDate = nextRecurrence(dueDate, recurrence)
+      const startDate = dateProperty.date ? new Date(dateProperty.date.start) : new Date()
+      const endDate = dateProperty.date?.end ? new Date(dateProperty.date.end) : undefined
+      const diff = endDate ? differenceInDays(endDate, startDate) : 0
+
+      const newStartDate = nextRecurrence(startDate, recurrence)
+      const newEndDate = diff > 0 ? add(newStartDate, { days: diff }) : undefined
       await notion.pages.update({
         page_id: page.id,
         properties: {
           'Due Date': {
             type: 'date',
-            date: { start: format(newDueDate, 'yyyy-MM-dd') }
+            date: { start: format(newStartDate, 'yyyy-MM-dd'), end: newEndDate ? format(newEndDate, 'yyyy-MM-dd') : undefined }
           },
           'Status': {
             type: 'status',
@@ -50,7 +54,7 @@ async function processRecurringTasks(databaseId: string) {
           }
         }
       })
-      console.log(`Updated page ${page.id} to ${format(newDueDate, 'yyyy-MM-dd')}`)
+      console.log(`Updated page ${page.id} to ${format(newStartDate, 'yyyy-MM-dd')}`)
     } catch (error) {
       console.error(`Failed to process page ${page.id}: ${error}`)
     }
