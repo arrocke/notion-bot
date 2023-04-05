@@ -4,7 +4,9 @@ import {
   startOfMonth,
   startOfWeek,
   startOfYear,
-  getDaysInYear
+  getDaysInYear,
+  differenceInDays,
+  startOfToday
 } from "date-fns";
 
 const RECURRENCE_MATCH = /^every(?: (other|\d+))? (\w+)(?: on (\w+) (\d+))?$/i;
@@ -226,8 +228,8 @@ export function nextRecurrence(date: Date, recurrence: string) {
   }
 
   let nextDate = date
-  const now = new Date()
-  while (nextDate <= date || nextDate <= now) {
+  const now = startOfToday()
+  while (differenceInDays(now, nextDate) >= 0) {
     nextDate = nextRecurrenceIteration(nextDate)
   }
 
