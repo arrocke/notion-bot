@@ -6,7 +6,8 @@ import {
   startOfYear,
   getDaysInYear,
   differenceInDays,
-  startOfToday
+  startOfToday,
+  startOfDay
 } from "date-fns";
 
 const RECURRENCE_MATCH = /^every(?: (other|\d+))? (\w+)(?: on (\w+) (\d+))?$/i;
@@ -196,7 +197,7 @@ export function nextRecurrence(date: Date, recurrence: string) {
       case "days": {
         switch (interval.type) {
           case "days": {
-            return nextInterval
+            return startOfDay(nextInterval)
           }
           case "weeks": {
             return add(startOfWeek(nextInterval), {
@@ -219,7 +220,7 @@ export function nextRecurrence(date: Date, recurrence: string) {
         }
       }
       case "date": {
-        return set(nextInterval, {
+        return set(startOfDay(nextInterval), {
           month: monthMap[internal.month],
           date: internal.day
         });
