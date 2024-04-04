@@ -6,11 +6,15 @@ on:
 jobs:
   update-tasks:
     runs-on: ubuntu-latest
+    env:
+      PROJECT_DATABASE: "${{ secrets.DATABASE_ID }}"
+      NOTION_TOKEN: "${{ secrets.NOTION_TOKEN }}"
+      CLIENT_TZ: America/Chicago
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm i
+
       - name: Update Tasks
-        run: |
-          curl --request POST \
-          --url 'https://notion.rocke.dev/api/workers/update-tasks' \
-          --header "Content-Type: application/json" \
-          --data '{"databaseId":"${{ secrets.DATABASE_ID }}"}' \
-          --fail-with-body
+        run: node index.mjs
